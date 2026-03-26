@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand palette */
+    --background: 40 33% 97%;
+    --foreground: 0 0% 10%;
+
+    --card: 40 25% 95%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 40 33% 97%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 128 19% 30%;
+    --primary-foreground: 40 33% 97%;
+
+    --secondary: 39 30% 69%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 40 18% 90%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 39 30% 69%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 4 70% 46%;
+    --destructive-foreground: 40 33% 97%;
+
+    --border: 40 15% 85%;
+    --input: 40 15% 85%;
+    --ring: 128 19% 30%;
+
+    --radius: 0.5rem;
+
+    /* Status colors */
+    --warning: 34 74% 47%;
+    --warning-foreground: 40 33% 97%;
+    --success: 128 19% 30%;
+    --success-foreground: 40 33% 97%;
+
+    /* Confidence badges */
+    --verified: 140 40% 40%;
+    --signal: 34 74% 47%;
+    --hypothesis: 0 0% 55%;
+    --escalate: 4 70% 46%;
+
+    /* Sidebar - deep olive */
+    --sidebar-background: 128 22% 18%;
+    --sidebar-foreground: 40 20% 85%;
+    --sidebar-primary: 40 33% 97%;
+    --sidebar-primary-foreground: 128 22% 18%;
+    --sidebar-accent: 128 18% 24%;
+    --sidebar-accent-foreground: 40 20% 92%;
+    --sidebar-border: 128 15% 25%;
+    --sidebar-ring: 39 30% 69%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Confidence badge styles */
+@layer components {
+  .badge-verified {
+    @apply bg-verified/15 text-verified border-verified/30;
+  }
+  .badge-signal {
+    @apply bg-warning/15 text-warning border-warning/30;
+  }
+  .badge-hypothesis {
+    @apply bg-muted text-muted-foreground border-muted-foreground/30;
+  }
+  .badge-escalate {
+    @apply bg-destructive/15 text-destructive border-destructive/30;
+  }
+}
