@@ -14,7 +14,7 @@ import type { ProductFormRow } from "@/hooks/use-analysis";
 const DEMO_ROWS: ProductFormRow[] = [
   {
     id: "d1",
-    name: "Single Origin EVOO — Harvest 2024",
+    name: "SKU-001",
     firstPurchaseVolume: "96",
     repeatRate90d: "64",
     avgSpend90d: "48",
@@ -22,7 +22,7 @@ const DEMO_ROWS: ProductFormRow[] = [
   },
   {
     id: "d2",
-    name: "Subscription Box — Monthly",
+    name: "SKU-002",
     firstPurchaseVolume: "164",
     repeatRate90d: "52",
     avgSpend90d: "38",
@@ -30,7 +30,7 @@ const DEMO_ROWS: ProductFormRow[] = [
   },
   {
     id: "d3",
-    name: "Intro Box — First Box 20% OFF",
+    name: "SKU-003",
     firstPurchaseVolume: "112",
     repeatRate90d: "28",
     avgSpend90d: "22",
