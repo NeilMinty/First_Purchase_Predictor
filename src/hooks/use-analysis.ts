@@ -22,16 +22,23 @@ export interface ProductAnalysis {
   name: string;
   firstPurchaseVolume: number;
   repeatRate90d: number;
+  /** repeat_rate × (1 − 1/√volume) — used for default sort only, never displayed */
+  weightedScore: number;
   zScore: number;
   zClassification: ZClassification;
   avgSpend90d: number;
   avgSpend180d: number;
+  /** ltv_180d / ltv_90d — continuous compounding ratio */
+  ltvMomentum: number;
   retentionTier: RetentionTier;
+  /** true when firstPurchaseVolume < 20 */
+  lowConfidence: boolean;
 }
 
 export interface AnalysisResult {
   products: ProductAnalysis[];
   highestVolumeProduct: ProductAnalysis | null;
+  /** highest by weightedScore, not raw repeat rate */
   highestRetentionProduct: ProductAnalysis | null;
   retentionGap: number;
 }
@@ -41,6 +48,11 @@ export interface AnalysisResult {
 function parseNum(s: string): number {
   const n = parseFloat(s.replace(/[^0-9.-]/g, ""));
   return isNaN(n) ? 0 : n;
+}
+
+function weightedScore(repeatRate: number, volume: number): number {
+  if (volume <= 0) return 0;
+  return repeatRate * (1 - 1 / Math.sqrt(volume));
 }
 
 function assignRetentionTier(index: number, total: number): RetentionTier {
@@ -66,7 +78,7 @@ export function computeAnalysis(rows: ProductFormRow[]): AnalysisResult {
   const variance = rates.reduce((s, r) => s + (r - mean) ** 2, 0) / rates.length;
   const stdDev = Math.sqrt(variance);
 
-  // Sort by repeat rate desc to assign retention tiers
+  // Retention tiers by rank of raw repeat rate
   const sortedByRate = [...valid].sort(
     (a, b) => parseNum(b.repeatRate90d) - parseNum(a.repeatRate90d),
   );
@@ -75,22 +87,30 @@ export function computeAnalysis(rows: ProductFormRow[]): AnalysisResult {
 
   const products: ProductAnalysis[] = valid.map(r => {
     const rate = parseNum(r.repeatRate90d);
+    const volume = parseNum(r.firstPurchaseVolume);
+    const spend90 = parseNum(r.avgSpend90d);
+    const spend180 = parseNum(r.avgSpend180d);
     const { zScore, zClassification } = computeZScore(rate, mean, stdDev);
+    const momentum = spend90 > 0 ? spend180 / spend90 : 0;
     return {
       id: r.id,
       name: r.name.trim(),
-      firstPurchaseVolume: parseNum(r.firstPurchaseVolume),
+      firstPurchaseVolume: volume,
       repeatRate90d: rate,
+      weightedScore: weightedScore(rate, volume),
       zScore,
       zClassification,
-      avgSpend90d: parseNum(r.avgSpend90d),
-      avgSpend180d: parseNum(r.avgSpend180d),
+      avgSpend90d: spend90,
+      avgSpend180d: spend180,
+      ltvMomentum: momentum,
       retentionTier: tierMap.get(r.id) ?? "signal",
+      lowConfidence: volume < 20,
     };
   });
 
   const byVolume = [...products].sort((a, b) => b.firstPurchaseVolume - a.firstPurchaseVolume);
-  const byRetention = [...products].sort((a, b) => b.repeatRate90d - a.repeatRate90d);
+  // highest retention = highest weightedScore
+  const byWeighted = [...products].sort((a, b) => b.weightedScore - a.weightedScore);
 
   const allRates = products.map(p => p.repeatRate90d);
   const retentionGap =
@@ -99,7 +119,7 @@ export function computeAnalysis(rows: ProductFormRow[]): AnalysisResult {
   return {
     products,
     highestVolumeProduct: byVolume[0] ?? null,
-    highestRetentionProduct: byRetention[0] ?? null,
+    highestRetentionProduct: byWeighted[0] ?? null,
     retentionGap,
   };
 }

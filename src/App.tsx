@@ -49,7 +49,7 @@ export default function App() {
   const showInsight = products.length >= 2 && highestVolumeProduct && highestRetentionProduct;
   const lowestRetentionProduct =
     products.length >= 2
-      ? [...products].sort((a, b) => a.repeatRate90d - b.repeatRate90d)[0]
+      ? [...products].sort((a, b) => a.weightedScore - b.weightedScore)[0]
       : null;
 
   return (
@@ -98,10 +98,16 @@ export default function App() {
 
             {/* Insight callout */}
             {showInsight && (
-              <InsightCallout
-                highestVolume={highestVolumeProduct!}
-                highestRetention={highestRetentionProduct!}
-              />
+              <div className="space-y-1.5">
+                <InsightCallout
+                  highestVolume={highestVolumeProduct!}
+                  highestRetention={highestRetentionProduct!}
+                  allProducts={products}
+                />
+                <p className="text-[11px] text-muted-foreground px-1">
+                  Correlation only — this tool identifies patterns in your data, not causes. Customers who buy different first products may differ in ways beyond the product itself.
+                </p>
+              </div>
             )}
 
             {/* Retention gap metric */}
