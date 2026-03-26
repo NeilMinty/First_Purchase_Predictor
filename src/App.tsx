@@ -19,6 +19,8 @@ const DEMO_ROWS: ProductFormRow[] = [
     repeatRate90d: "64",
     avgSpend90d: "48",
     avgSpend180d: "82",
+    fullPricePct: "88",
+    discountDepth: "",
   },
   {
     id: "d2",
@@ -27,6 +29,8 @@ const DEMO_ROWS: ProductFormRow[] = [
     repeatRate90d: "52",
     avgSpend90d: "38",
     avgSpend180d: "64",
+    fullPricePct: "46",
+    discountDepth: "14",
   },
   {
     id: "d3",
@@ -35,6 +39,8 @@ const DEMO_ROWS: ProductFormRow[] = [
     repeatRate90d: "28",
     avgSpend90d: "22",
     avgSpend180d: "34",
+    fullPricePct: "32",
+    discountDepth: "34",
   },
 ];
 
@@ -105,7 +111,7 @@ export default function App() {
                   allProducts={products}
                 />
                 <p className="text-[11px] text-muted-foreground px-1">
-                  Correlation only — this tool identifies patterns in your data, not causes. Customers who buy different first products may differ in ways beyond the product itself.
+                  Correlation only — this tool identifies patterns in your data, not causes. Promotional mix, seasonality, and customer self-selection all influence first purchase patterns independently of the product itself.
                 </p>
               </div>
             )}

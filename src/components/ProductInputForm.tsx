@@ -7,6 +7,16 @@ import type { ProductFormRow } from "@/hooks/use-analysis";
 
 const MAX_PRODUCTS = 10;
 
+const EMPTY_ROW_DEFAULTS: Omit<ProductFormRow, "id"> = {
+  name: "",
+  firstPurchaseVolume: "",
+  repeatRate90d: "",
+  avgSpend90d: "",
+  avgSpend180d: "",
+  fullPricePct: "",
+  discountDepth: "",
+};
+
 interface ProductInputFormProps {
   rows: ProductFormRow[];
   onChange: (rows: ProductFormRow[]) => void;
@@ -26,12 +36,14 @@ function NumInput({
   prefix,
   suffix,
   placeholder,
+  muted,
 }: {
   value: string;
   onChange: (v: string) => void;
   prefix?: string;
   suffix?: string;
   placeholder?: string;
+  muted?: boolean;
 }) {
   return (
     <div className="relative flex items-center">
@@ -49,6 +61,7 @@ function NumInput({
           "h-8 text-sm font-mono",
           prefix && "pl-6",
           suffix && "pr-6",
+          muted && "placeholder:text-muted-foreground/40",
         )}
       />
       {suffix && (
@@ -59,6 +72,9 @@ function NumInput({
     </div>
   );
 }
+
+// Grid template shared between header and rows
+const GRID = "1fr 4.5rem 6rem 5.5rem 5.5rem 5.5rem 5.5rem 2rem";
 
 export function ProductInputForm({ rows, onChange }: ProductInputFormProps) {
   const update = useCallback(
@@ -78,21 +94,20 @@ export function ProductInputForm({ rows, onChange }: ProductInputFormProps) {
 
   const add = useCallback(() => {
     if (rows.length >= MAX_PRODUCTS) return;
-    onChange([
-      ...rows,
-      { id: crypto.randomUUID(), name: "", firstPurchaseVolume: "", repeatRate90d: "", avgSpend90d: "", avgSpend180d: "" },
-    ]);
+    onChange([...rows, { id: crypto.randomUUID(), ...EMPTY_ROW_DEFAULTS }]);
   }, [rows, onChange]);
 
   return (
     <div className="space-y-2">
       {/* Column headers */}
-      <div className="hidden sm:grid gap-2 px-1" style={{ gridTemplateColumns: "1fr 6rem 7rem 7rem 7rem 2rem" }}>
+      <div className="hidden sm:grid gap-2 px-1" style={{ gridTemplateColumns: GRID }}>
         <FieldLabel>Product name</FieldLabel>
-        <FieldLabel className="text-right">1st purchase vol</FieldLabel>
-        <FieldLabel className="text-right">90d repeat rate</FieldLabel>
-        <FieldLabel className="text-right">Avg spend 90d</FieldLabel>
-        <FieldLabel className="text-right">Avg spend 180d</FieldLabel>
+        <FieldLabel className="text-right">Volume</FieldLabel>
+        <FieldLabel className="text-right">90d repeat</FieldLabel>
+        <FieldLabel className="text-right">Spend 90d</FieldLabel>
+        <FieldLabel className="text-right">Spend 180d</FieldLabel>
+        <FieldLabel className="text-right">Full price %</FieldLabel>
+        <FieldLabel className="text-right">Disc. depth</FieldLabel>
         <span />
       </div>
 
@@ -102,9 +117,8 @@ export function ProductInputForm({ rows, onChange }: ProductInputFormProps) {
           <div
             key={row.id}
             className="grid gap-2 items-center"
-            style={{ gridTemplateColumns: "1fr 6rem 7rem 7rem 7rem 2rem" }}
+            style={{ gridTemplateColumns: GRID }}
           >
-            {/* Mobile: show labels above each field on xs */}
             <div>
               <span className="sm:hidden block">
                 <FieldLabel>Product {idx + 1}</FieldLabel>
@@ -120,25 +134,34 @@ export function ProductInputForm({ rows, onChange }: ProductInputFormProps) {
             <NumInput
               value={row.firstPurchaseVolume}
               onChange={v => update(row.id, "firstPurchaseVolume", v)}
-              placeholder="0"
             />
             <NumInput
               value={row.repeatRate90d}
               onChange={v => update(row.id, "repeatRate90d", v)}
               suffix="%"
-              placeholder="0"
             />
             <NumInput
               value={row.avgSpend90d}
               onChange={v => update(row.id, "avgSpend90d", v)}
               prefix="£"
-              placeholder="0"
             />
             <NumInput
               value={row.avgSpend180d}
               onChange={v => update(row.id, "avgSpend180d", v)}
               prefix="£"
-              placeholder="0"
+            />
+            <NumInput
+              value={row.fullPricePct}
+              onChange={v => update(row.id, "fullPricePct", v)}
+              suffix="%"
+              placeholder="100"
+            />
+            <NumInput
+              value={row.discountDepth}
+              onChange={v => update(row.id, "discountDepth", v)}
+              suffix="%"
+              placeholder="optional"
+              muted
             />
 
             <Button
@@ -164,7 +187,9 @@ export function ProductInputForm({ rows, onChange }: ProductInputFormProps) {
       >
         <Plus className="h-3.5 w-3.5" />
         Add product
-        {rows.length >= MAX_PRODUCTS && <span className="text-muted-foreground">(max {MAX_PRODUCTS})</span>}
+        {rows.length >= MAX_PRODUCTS && (
+          <span className="text-muted-foreground">(max {MAX_PRODUCTS})</span>
+        )}
       </Button>
     </div>
   );

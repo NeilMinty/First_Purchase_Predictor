@@ -24,7 +24,15 @@ const TIER_CONFIG: Record<RetentionTier, { label: string; className: string }> =
 
 // ─── SORT TYPES ───────────────────────────────────────────────────────────────
 
-type SortKey = "name" | "firstPurchaseVolume" | "weightedScore" | "avgSpend90d" | "avgSpend180d" | "ltvMomentum";
+type SortKey =
+  | "name"
+  | "firstPurchaseVolume"
+  | "weightedScore"
+  | "avgSpend90d"
+  | "avgSpend180d"
+  | "ltvMomentum"
+  | "fullPricePct";
+
 type SortDir = "asc" | "desc";
 
 interface SortState {
@@ -32,7 +40,7 @@ interface SortState {
   dir: SortDir;
 }
 
-// ─── COLUMN HEADER ────────────────────────────────────────────────────────────
+// ─── SORTABLE COLUMN HEADER ───────────────────────────────────────────────────
 
 function SortableHead({
   label,
@@ -82,7 +90,7 @@ function SortableHead({
             <TooltipTrigger asChild>
               <span className="inline-flex">{inner}</span>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs max-w-[240px] text-center">
+            <TooltipContent side="top" className="text-xs max-w-[260px] text-center">
               {tooltip}
             </TooltipContent>
           </Tooltip>
@@ -97,20 +105,11 @@ function SortableHead({
 // ─── LTV MOMENTUM CELL ────────────────────────────────────────────────────────
 
 function MomentumCell({ ratio }: { ratio: number }) {
-  if (ratio <= 0) {
-    return <span className="font-mono text-sm text-muted-foreground">—</span>;
-  }
+  if (ratio <= 0) return <span className="font-mono text-sm text-muted-foreground">—</span>;
 
   const isWeak = ratio < 1.3;
   const isStrong = ratio >= 2.0;
-
-  const formatted = `${ratio.toFixed(1)}×`;
-
-  const colorClass = isStrong
-    ? "text-verified"
-    : isWeak
-    ? "text-warning"
-    : "text-foreground";
+  const colorClass = isStrong ? "text-verified" : isWeak ? "text-warning" : "text-foreground";
 
   if (isWeak) {
     return (
@@ -118,7 +117,7 @@ function MomentumCell({ ratio }: { ratio: number }) {
         <Tooltip>
           <TooltipTrigger asChild>
             <span className={cn("font-mono text-sm tabular-nums cursor-help", colorClass)}>
-              {formatted}
+              {ratio.toFixed(1)}×
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs max-w-[220px]">
@@ -129,12 +128,72 @@ function MomentumCell({ ratio }: { ratio: number }) {
     );
   }
 
-  return <span className={cn("font-mono text-sm tabular-nums", colorClass)}>{formatted}</span>;
+  return (
+    <span className={cn("font-mono text-sm tabular-nums", colorClass)}>{ratio.toFixed(1)}×</span>
+  );
 }
 
-// ─── COMPONENT ────────────────────────────────────────────────────────────────
+// ─── ACQUISITION QUALITY CELL ─────────────────────────────────────────────────
+
+function AcquisitionQualityCell({
+  fullPricePct,
+  discountDepth,
+}: {
+  fullPricePct: number;
+  discountDepth: number;
+}) {
+  let badgeClass: string;
+  let badgeTooltip: string | undefined;
+
+  if (fullPricePct < 50) {
+    badgeClass = "badge-escalate";
+    badgeTooltip =
+      "More than half of first purchases were discounted — repeat rate may not hold at full price";
+  } else if (fullPricePct < 80) {
+    badgeClass = "badge-signal";
+    badgeTooltip = undefined;
+  } else {
+    badgeClass = "badge-verified";
+    badgeTooltip = undefined;
+  }
+
+  const badge = (
+    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 whitespace-nowrap", badgeClass)}>
+      {fullPricePct.toFixed(0)}% full price
+    </Badge>
+  );
+
+  return (
+    <div className="space-y-0.5">
+      {badgeTooltip ? (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex cursor-help">{badge}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs max-w-[220px]">
+              {badgeTooltip}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        badge
+      )}
+      {discountDepth > 30 && (
+        <p className="text-[10px] text-muted-foreground font-mono">
+          avg −{discountDepth.toFixed(0)}% off
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── TABLE ────────────────────────────────────────────────────────────────────
 
 const LOW_CONFIDENCE_THRESHOLD = 20;
+
+const REPEAT_RATE_SORT_TOOLTIP =
+  "Sorted by repeat rate adjusted for sample size and acquisition quality — discounted first purchases are down-weighted.";
 
 interface SortableProductTableProps {
   products: ProductAnalysis[];
@@ -190,7 +249,7 @@ export function SortableProductTable({ products }: SortableProductTableProps) {
               current={sort}
               onSort={toggleSort}
               className="text-right"
-              tooltip="Sorted by repeat rate adjusted for sample size — products with fewer customers are discounted until volume is sufficient to be reliable"
+              tooltip={REPEAT_RATE_SORT_TOOLTIP}
             />
             <SortableHead
               label="LTV 90d"
@@ -213,13 +272,20 @@ export function SortableProductTable({ products }: SortableProductTableProps) {
               onSort={toggleSort}
               className="text-right"
             />
+            <SortableHead
+              label="Acquisition quality"
+              sortKey="fullPricePct"
+              current={sort}
+              onSort={toggleSort}
+              className="text-left [&>span]:justify-start"
+            />
             <TableHead className="text-left">Retention tier</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sorted.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
                 Add at least one product above to see results.
               </TableCell>
             </TableRow>
@@ -228,7 +294,7 @@ export function SortableProductTable({ products }: SortableProductTableProps) {
               const tier = TIER_CONFIG[p.retentionTier];
               return (
                 <TableRow key={p.id}>
-                  <TableCell className="max-w-[200px]">
+                  <TableCell className="max-w-[180px]">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="text-sm font-medium truncate" title={p.name}>
                         {p.name}
@@ -268,6 +334,12 @@ export function SortableProductTable({ products }: SortableProductTableProps) {
                     <MomentumCell ratio={p.ltvMomentum} />
                   </TableCell>
                   <TableCell>
+                    <AcquisitionQualityCell
+                      fullPricePct={p.fullPricePct}
+                      discountDepth={p.discountDepth}
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Badge
                       variant="outline"
                       className={cn("text-[10px] px-1.5 py-0 whitespace-nowrap", tier.className)}
@@ -284,7 +356,8 @@ export function SortableProductTable({ products }: SortableProductTableProps) {
 
       {hasLowConfidence && (
         <p className="text-[11px] text-muted-foreground px-4 py-2 border-t border-border">
-          Products with fewer than {LOW_CONFIDENCE_THRESHOLD} first purchase customers are flagged — repeat rates at this volume are unreliable for decision-making.
+          Products with fewer than {LOW_CONFIDENCE_THRESHOLD} first purchase customers are flagged —
+          repeat rates at this volume are unreliable for decision-making.
         </p>
       )}
     </div>

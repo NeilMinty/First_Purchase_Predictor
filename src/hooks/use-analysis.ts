@@ -11,6 +11,10 @@ export interface ProductFormRow {
   repeatRate90d: string;
   avgSpend90d: string;
   avgSpend180d: string;
+  /** % of first purchases at full price (0–100). Empty treated as 100. */
+  fullPricePct: string;
+  /** Average discount depth on first purchase orders (0–100). Optional. */
+  discountDepth: string;
 }
 
 // ─── OUTPUT TYPES ─────────────────────────────────────────────────────────────
@@ -22,7 +26,10 @@ export interface ProductAnalysis {
   name: string;
   firstPurchaseVolume: number;
   repeatRate90d: number;
-  /** repeat_rate × (1 − 1/√volume) — used for default sort only, never displayed */
+  /**
+   * repeat_rate × (1 − 1/√volume) × (fullPricePct / 100)
+   * Used for default sort only — never displayed directly.
+   */
   weightedScore: number;
   zScore: number;
   zClassification: ZClassification;
@@ -33,6 +40,10 @@ export interface ProductAnalysis {
   retentionTier: RetentionTier;
   /** true when firstPurchaseVolume < 20 */
   lowConfidence: boolean;
+  /** parsed fullPricePct, 0–100 */
+  fullPricePct: number;
+  /** parsed discountDepth, 0–100. 0 = not entered. */
+  discountDepth: number;
 }
 
 export interface AnalysisResult {
@@ -50,9 +61,16 @@ function parseNum(s: string): number {
   return isNaN(n) ? 0 : n;
 }
 
-function weightedScore(repeatRate: number, volume: number): number {
+/** Full price pct: empty string → 100 (assume full price if not entered). */
+function parseFpPct(s: string): number {
+  if (!s.trim()) return 100;
+  const n = parseFloat(s.replace(/[^0-9.-]/g, ""));
+  return isNaN(n) ? 100 : Math.max(0, Math.min(100, n));
+}
+
+function computeWeightedScore(repeatRate: number, volume: number, fullPricePct: number): number {
   if (volume <= 0) return 0;
-  return repeatRate * (1 - 1 / Math.sqrt(volume));
+  return repeatRate * (1 - 1 / Math.sqrt(volume)) * (fullPricePct / 100);
 }
 
 function assignRetentionTier(index: number, total: number): RetentionTier {
@@ -90,26 +108,28 @@ export function computeAnalysis(rows: ProductFormRow[]): AnalysisResult {
     const volume = parseNum(r.firstPurchaseVolume);
     const spend90 = parseNum(r.avgSpend90d);
     const spend180 = parseNum(r.avgSpend180d);
+    const fpPct = parseFpPct(r.fullPricePct);
+    const discDepth = parseNum(r.discountDepth);
     const { zScore, zClassification } = computeZScore(rate, mean, stdDev);
-    const momentum = spend90 > 0 ? spend180 / spend90 : 0;
     return {
       id: r.id,
       name: r.name.trim(),
       firstPurchaseVolume: volume,
       repeatRate90d: rate,
-      weightedScore: weightedScore(rate, volume),
+      weightedScore: computeWeightedScore(rate, volume, fpPct),
       zScore,
       zClassification,
       avgSpend90d: spend90,
       avgSpend180d: spend180,
-      ltvMomentum: momentum,
+      ltvMomentum: spend90 > 0 ? spend180 / spend90 : 0,
       retentionTier: tierMap.get(r.id) ?? "signal",
       lowConfidence: volume < 20,
+      fullPricePct: fpPct,
+      discountDepth: discDepth,
     };
   });
 
   const byVolume = [...products].sort((a, b) => b.firstPurchaseVolume - a.firstPurchaseVolume);
-  // highest retention = highest weightedScore
   const byWeighted = [...products].sort((a, b) => b.weightedScore - a.weightedScore);
 
   const allRates = products.map(p => p.repeatRate90d);
