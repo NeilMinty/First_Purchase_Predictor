@@ -104,17 +104,17 @@ export default function App() {
 
             {/* Insight callout */}
             {showInsight && (
-              <div className="space-y-1.5">
-                <InsightCallout
-                  highestVolume={highestVolumeProduct!}
-                  highestRetention={highestRetentionProduct!}
-                  allProducts={products}
-                />
-                <p className="text-[11px] text-muted-foreground px-1">
-                  Correlation only — this tool identifies patterns in your data, not causes. Promotional mix, seasonality, and customer self-selection all influence first purchase patterns independently of the product itself.
-                </p>
-              </div>
+              <InsightCallout
+                highestVolume={highestVolumeProduct!}
+                highestRetention={highestRetentionProduct!}
+                allProducts={products}
+              />
             )}
+
+            {/* Causality caveat — always visible when there is output */}
+            <p className="text-xs text-muted-foreground">
+              Correlation only — this tool identifies patterns in your data, not causes. Promotional mix, seasonality, and customer self-selection all influence first purchase patterns independently of the product itself.
+            </p>
 
             {/* Retention gap metric */}
             {products.length >= 2 && highestRetentionProduct && lowestRetentionProduct && (
@@ -133,6 +133,9 @@ export default function App() {
                 <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   First-purchase products ranked
                 </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Default sort adjusts repeat rate for sample size and acquisition quality — products with fewer customers or higher discount dependency rank lower than their raw rate suggests.
+                </p>
               </CardHeader>
               <CardContent className="p-0 pb-1">
                 <SortableProductTable products={products} />
